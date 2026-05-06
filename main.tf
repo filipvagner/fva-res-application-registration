@@ -1,5 +1,9 @@
+locals {
+  formatted_display_name = startswith(lower(var.display_name), "spn") ? var.display_name : "spn-${var.display_name}"
+}
+
 resource "azuread_application_registration" "this" {
-  display_name = var.display_name
+  display_name = local.formatted_display_name
   description  = var.description == "" ? "Managed by Terraform." : "Managed by Terraform. ${var.description}"
 }
 
@@ -35,7 +39,7 @@ resource "azuread_service_principal" "this" {
 }
 
 resource "azurerm_key_vault_secret" "client_secret" {
-  name         = var.key_vault_secret_name != null ? var.key_vault_secret_name : "spn-${var.display_name}-clientsecret"
+  name         = var.key_vault_secret_name != null ? var.key_vault_secret_name : "${local.formatted_display_name}-clientsecret"
   value        = azuread_application_password.this.value
   content_type = "Managed by Terraform. Client secret ID: ${azuread_application_password.this.key_id}"
   expiration_date = local.password_expiration_timestamp
@@ -43,7 +47,7 @@ resource "azurerm_key_vault_secret" "client_secret" {
 }
 
 resource "azurerm_key_vault_secret" "client_id" {
-  name         = "spn-${var.display_name}-clientid"
+  name         = "${local.formatted_display_name}-clientid"
   value        = azuread_application_registration.this.client_id
   content_type = "Managed by Terraform."
   key_vault_id = var.key_vault_id
